@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "server",
     # Внешние приложения:
     "drf_spectacular",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -137,6 +138,9 @@ AUTH_USER_MODEL = "accounts.Account"
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],  # настройка простой схемы аутентификации
 }
 
 SPECTACULAR_SETTINGS = {
