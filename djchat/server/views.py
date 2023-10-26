@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework.response import Response
 from .models import Server
 from .serializer import ServerSerializer
@@ -29,6 +30,14 @@ class ServerListViewSet(viewsets.ViewSet):
         # то присваиваем его переменной
         by_user = request.query_params.get("by_user") == "true"
 
+        # Нижеследующий параметр необходим для
+        # фильтрации серверов по id сервера
+        by_serverid = request.query_params.get("by_serverid")
+
+        if by_user or by_serverid and not request.user.is_authenticated:
+            # Здесь мы проверям зарегистрован ли пользователь, чтоб просить фильтрацию по пользователю или же по номеру сервера.
+            raise AuthenticationFailed()
+
         if category:
             # Если категория есть, то выполняется последующий код,
             # если категории нет в запросе, то вернутся
@@ -57,6 +66,26 @@ class ServerListViewSet(viewsets.ViewSet):
             # Простая нарезка списков/сетов
 
             self.queryset = self.queryset[: int(qty)]
+
+        if by_serverid:
+            # Здесь мы начинаем фильтровать сервера
+            # по id номеру. Но у нас могут возникнуть
+            # проблемы в том плане что может быть указан
+            # номер сервера, который вообще не присутсвует
+            # в списке серверов, а также может быть
+            # задан вообще не номер, а набор букв.
+            # На этот случай нам нужно предусмотреть обработку ошибок.
+            try:
+                self.queryset = self.queryset.filter(id=by_serverid)
+                if not self.queryset.exists():
+                    # Тут мы проверяем присутвует ли
+                    # вообще такой номер сервера в базе
+                    raise ValidationError(
+                        detail=f"Server with id {by_serverid} not found"
+                    )
+            except ValueError:
+                # Тут обработчик ошибок поймает исключение, если вместо номера сервера было задано что-то другое (буквыб символыб прочее ..)
+                raise ValidationError(detail=f"Server value error")
 
         # Вот тут в сериалайзере присутвует приписка many.
         # Как я понял эта приписка обязательна если в подели
