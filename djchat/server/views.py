@@ -4,6 +4,7 @@ from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework.response import Response
 from .models import Server
 from .serializer import ServerSerializer
+from django.db.models import Count
 
 
 class ServerListViewSet(viewsets.ViewSet):
@@ -34,6 +35,11 @@ class ServerListViewSet(viewsets.ViewSet):
         # фильтрации серверов по id сервера
         by_serverid = request.query_params.get("by_serverid")
 
+        # Нижеследующий параметр отслеживает
+        # нужно ли подсчитывать кол-во
+        # подписчиков на данный сервер или нет.
+        with_num_members = request.query_params.get("with_num_members") == "true"
+
         if by_user or by_serverid and not request.user.is_authenticated:
             # Здесь мы проверям зарегистрован ли пользователь, чтоб просить фильтрацию по пользователю или же по номеру сервера.
             raise AuthenticationFailed()
@@ -59,6 +65,25 @@ class ServerListViewSet(viewsets.ViewSet):
             # перед if qty. Иначе сервер начинает ругаться.
             user_id = request.user.id
             self.queryset = self.queryset.filter(member=user_id)
+
+        if with_num_members:
+            # Этот парамтер проверяет есть ли условие в
+            # запросе, если есть, то суммирует кол-во
+            # участников, которые подписаны на данный сервер.
+            # Нужно обратить внимание, что тут вдруг
+            # появляется переменная num_members, которая
+            # ранее нигде не создавалась. Эта переменная
+            # будет указана в serializer объекта.
+            # С тем же самым именем. У вас может возникнуть вопрос ,
+            #  почему мы используем класс Count, разве
+            # мы не можем посчитать его другими функциями.
+            # Я полагаю можем. Но через класс нам удобнее
+            # обратся к параметру по имени и не
+            # прописывать длинные портянки. Также
+            # нужно обратить внимание что нужно
+            # теперь добавить num_members в сериалайзер,
+            # так как django не поймет как его нужно отображать
+            self.queryset = self.queryset.annotate(num_members=Count("member"))
 
         if qty:
             # Если в запросе указано кол-во, то мы просто
@@ -87,11 +112,22 @@ class ServerListViewSet(viewsets.ViewSet):
                 # Тут обработчик ошибок поймает исключение, если вместо номера сервера было задано что-то другое (буквыб символыб прочее ..)
                 raise ValidationError(detail=f"Server value error")
 
-        # Вот тут в сериалайзере присутвует приписка many.
+        # Ниже в сериалайзере присутвует приписка many.
         # Как я понял эта приписка обязательна если в подели
         # присутствует отношение многие ко многим. В нашем
         # случае она есть. Но если это не так нужно поправить этот комментарий
-        serializer = ServerSerializer(self.queryset, many=True)
+        #
+        # Также обрати внимание на контекст.
+        # Это поле передается в сериалайзер для того,
+        # чтоб он смог понять нужно ли это поле
+        # отображать или нет. Мне кажется это не
+        # элегантное решение. Наверняка есть какое
+        # то решения не уровне самого сериалайзера.
+        # Возможно можно прописать какую то функцию.
+        # Но как одно из решений имеет место быть
+        serializer = ServerSerializer(
+            self.queryset, many=True, context={"num_members": with_num_members}
+        )
 
         # Ну и собственно возвращаем данные
         return Response(serializer.data)
