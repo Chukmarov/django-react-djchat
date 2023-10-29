@@ -129,6 +129,11 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Изменение 538fbca4-4585-4128-89a8-6dc5d43b602a
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "media/"
+# Конец изменения 538fbca4-4585-4128-89a8-6dc5d43b602a
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 

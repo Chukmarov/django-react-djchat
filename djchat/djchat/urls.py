@@ -3,6 +3,8 @@ from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 from server.views import ServerListViewSet
+from django.conf import settings
+from django.conf.urls.static import static
 
 # Вот тут создается отдельный класс роутеров и регистриуется
 # специальный путь, который имеет встроенные классы , которые
@@ -23,3 +25,8 @@ urlpatterns = [
         name="swagger-ui",
     ),
 ] + router.urls
+
+# Изменение 538fbca4-4585-4128-89a8-6dc5d43b602a
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Конец изменения 538fbca4-4585-4128-89a8-6dc5d43b602a
