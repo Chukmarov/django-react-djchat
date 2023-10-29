@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework.response import Response
+from .schema import server_list_docs
 from .models import Server
 from .serializer import ServerSerializer
 from django.db.models import Count
@@ -17,7 +18,24 @@ class ServerListViewSet(viewsets.ViewSet):
     # Тут мы выбираем все сервера
     queryset = Server.objects.all()
 
+    @server_list_docs
     def list(self, request):
+        """
+        Этот endpoint, описыает то , что будет отдано API при переходе на endpoint http://127.0.0.1:8000/api/server/select/
+        При этом при переходе по этому пути можно передать несколько параметров для уточнения того что мы хотим видеть в итоговом отображении.
+
+        Если ничего не передавать в параметрах, а просто перейти по этому пути, то сервер отдаст весь набор существующих серверов. Да, мало-масленное, но что поделать , вот такие название дал преподаватель.
+
+        Но если мы хотим отфильтровать итоговый результат мы можем задать несколько параметров.
+        Например:
+        1. ?category = "название категории" обычной string
+        2. ?qty = задаем кол-во , которое мы хотим видеть в результате, в формате int
+        3. ?by_user = true/false, тут мы отфильтровываем только те сервера на которые подписан авторизированный в настоящий момент пользователь
+        4. ?by_server_id = тут мы отфильтровываем выдачу по id сервера просто int
+        5. ?with_num_numbers = тут мы пишем нужно ли подсчитывать и выдавать в результате кол-во подписчиков каждого из серверов.
+
+        """
+
         # Находим параметр category в запросе
         # и писваиваем его переменной
         category = request.query_params.get("category")
@@ -40,10 +58,6 @@ class ServerListViewSet(viewsets.ViewSet):
         # подписчиков на данный сервер или нет.
         with_num_members = request.query_params.get("with_num_members") == "true"
 
-        if by_user or by_serverid and not request.user.is_authenticated:
-            # Здесь мы проверям зарегистрован ли пользователь, чтоб просить фильтрацию по пользователю или же по номеру сервера.
-            raise AuthenticationFailed()
-
         if category:
             # Если категория есть, то выполняется последующий код,
             # если категории нет в запросе, то вернутся
@@ -57,14 +71,17 @@ class ServerListViewSet(viewsets.ViewSet):
             self.queryset = self.queryset.filter(category__name=category)
 
         if by_user:
-            # Если в запросе присутвует параметр by_user.
-            # То мы находим Id пользователя и присваиваем
-            # его переменой, после чего фильтруем ранее
-            # полученные данные. Важно что он должен стоять
-            # и именно перед урезанием массива , т.е.
-            # перед if qty. Иначе сервер начинает ругаться.
-            user_id = request.user.id
-            self.queryset = self.queryset.filter(member=user_id)
+            if request.user.is_authenticated:
+                # Если в запросе присутвует параметр by_user.
+                # То мы находим Id пользователя и присваиваем
+                # его переменой, после чего фильтруем ранее
+                # полученные данные. Важно что он должен стоять
+                # и именно перед урезанием массива , т.е.
+                # перед if qty. Иначе сервер начинает ругаться.
+                user_id = request.user.id
+                self.queryset = self.queryset.filter(member=user_id)
+            else:
+                raise AuthenticationFailed()
 
         if with_num_members:
             # Этот парамтер проверяет есть ли условие в
@@ -93,6 +110,8 @@ class ServerListViewSet(viewsets.ViewSet):
             self.queryset = self.queryset[: int(qty)]
 
         if by_serverid:
+            if not request.user.is_authenticated:
+                raise AuthenticationFailed()
             # Здесь мы начинаем фильтровать сервера
             # по id номеру. Но у нас могут возникнуть
             # проблемы в том плане что может быть указан
