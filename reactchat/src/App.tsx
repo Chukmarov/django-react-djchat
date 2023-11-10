@@ -5,6 +5,10 @@ import {
   Route, 
   RouterProvider, 
 } from "react-router-dom"
+// вот тут мы импортируем измененую тему
+// для нашего приложения из папки theme
+import { createMuiTheme } from "./theme/theme";
+import { ThemeProvider } from "@emotion/react";
 
 /*
 Ниже пойдет самое интересное. Тут две обертки Одна вложена в другую
@@ -40,7 +44,15 @@ React.FC расшифровывается как React Functional Component.
 использующий React, что помогает в правильной типизации компонента.
 */
 const App: React.FC = () =>{
-  return <RouterProvider router={router}/>
+  // вот тут мы переопределяем тему
+  // и создаем ее при роутинге
+  const theme = createMuiTheme();
+  return(
+    <ThemeProvider theme = {theme}>
+        <RouterProvider router={router}/>
+    </ThemeProvider> 
+    
+  )
 }
 
 
