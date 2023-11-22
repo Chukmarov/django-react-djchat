@@ -13,7 +13,13 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { useEffect, useState } from "react";
 
 const PrimaryAppBar = () => {
+  /* sideMenu, setSiteMenu - это деструктуризация массива, 
+  При это sideMenu это переменнаяБ флаг, а setSideMenu -
+  это функция, которая присваивает sideMenu значения
+  True или False */
   const [sideMenu, setSideMenu] = useState(false);
+  /* Здесь мы применяем тему
+  Общую для всего приложения */
   const theme = useTheme();
 
   const isSmallScreen = useMediaQuery(theme.breakpoints.up("sm"));
