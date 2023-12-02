@@ -1,10 +1,34 @@
 import { useTheme } from "@mui/material/styles";
 import { Box, useMediaQuery, Typography, styled } from "@mui/material";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import DrawerToggle from "../components/PrimaryDraw/DrawToggle";
 import MuiDrawer from "@mui/material/Drawer";
+import React from "react";
 
-const PrimaryDraw = () => {
+/* 
+Здесь определен тип Props, который представляет собой объект с 
+единственным свойством children, тип которого ReactNode. ReactNode -
+это общий тип для элементов React, который может представлять текст,
+компоненты или фрагменты. */
+type Props = {
+  children: ReactNode;
+};
+
+/* 
+Этот тип ChildProps определяет свойство open с типом Boolean.
+Это будет использоваться в дочерних компонентах.
+*/
+type ChildProps = {
+  open: Boolean;
+};
+
+/* 
+Тип ChildElement представляет собой React-элемент, который ожидает
+дочерние компоненты с свойствами, соответствующими ChildProps.
+*/
+type ChildElement = React.ReactElement<ChildProps>;
+
+const PrimaryDraw: React.FC<Props> = ({ children }) => {
   const theme = useTheme();
   const below600 = useMediaQuery("(max-width:599px)");
 
@@ -116,14 +140,28 @@ const PrimaryDraw = () => {
             handleDrawerClose={handleDrawerClose}
             handleDrawerOpen={handleDrawerOpen}
           />
-          {/* Тут мы просто заполняем данными, 
-          для понимания как они будут отображаться */}
-          {[...Array(30)].map((_, i) => (
-            <Typography key={i} paragraph>
-              {i + 1}
-            </Typography>
-          ))}
         </Box>
+        {/* 
+        React.Children.map(children, (child) => { ... }):
+        Это итерирует по каждому дочернему элементу, переданному в компонент PrimaryDraw.
+
+        React.isValidElement(child):
+        Эта проверка определяет, является ли текущий дочерний элемент (child) допустимым элементом React.
+        React.cloneElement(child as ChildElement, { open }):
+
+        Если child является допустимым элементом React, то происходит клонирование этого элемента с использованием React.cloneElement.
+        Второй аргумент { open } представляет собой новые свойства, которые передаются клонированному элементу.
+        Предположительно, open передается в качестве свойства в дочерние компоненты.
+        else: child;:
+
+        Если child не является допустимым элементом React, то просто возвращается оригинальный child.
+        Таким образом, этот код пробегает через все дочерние элементы, переданные в компонент PrimaryDraw. Если элемент является допустимым элементом React, то он клонируется с новым свойством open. Если элемент не является допустимым элементом React, он остается без изменений. Это может быть использовано для передачи дополнительных свойств или обработки дочерних элементов вложенных компонентов.
+        */}
+        {React.Children.map(children, (child) => {
+          return React.isValidElement(child)
+            ? React.cloneElement(child as ChildElement, { open })
+            : child;
+        })}
       </Box>
     </Drawer>
   );
